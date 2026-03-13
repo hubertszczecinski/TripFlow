@@ -1,2 +1,1 @@
-# TripFlow
-Business travel management project
+The project aims to deliver TripFlow, a modern and intuitive system supporting complex business travel workflows. The solution automates request processing, approval chains, reservations, and cost accounting. Additionally, through the implementation of AI/ML algorithms, the system reduces manual entry errors and improves operational efficiency, offering the administration and finance departments a transparent oversight tool.
