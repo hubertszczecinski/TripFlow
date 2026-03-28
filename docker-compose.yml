@@ -1,0 +1,13 @@
+services:
+  users_service:
+    build: ./users_service
+    container_name: users_service
+    ports:
+      - "8001:8000"
+  car_fleet_service:
+    build: ./car_fleet_service
+    container_name: car_fleet_service
+    ports:
+      - "8002:8000"
+    depends_on:
+      - users_service    
