@@ -5,6 +5,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import status
+from permissions import IsAdmin, IsFinance, IsHR, IsUser
 
 @api_view(['GET'])
 def get_users(request):
@@ -157,7 +158,7 @@ def generate_or_refresh_token(user: User) -> dict[str, str]:
     }
 
 @api_view(['POST'])
-@permission_classes([IsAdmin])
+@permission_classes([IsAdmin, IsAuthenticated])
 def create_user(request) -> Response:
 
     username: str = request.data.get("email")
@@ -180,7 +181,7 @@ def create_user(request) -> Response:
 
 
 @api_view(['DELETE'])
-@permission_classes([IsAdmin])
+@permission_classes([IsAdmin, IsAuthenticated])
 def delete_user(request, id):
 
     try:
@@ -196,17 +197,48 @@ def delete_user(request, id):
     
 
 @api_view(['PATCH'])
-@permission_classes([IsAdmin])
+@permission_classes([IsAdmin, IsAuthenticated])
 def update_user(request, id) -> Response:
 
     try:
-
         user: User = User.objects.get(id=id)
         user.role = request.data.get("role", user.role)
-
         user.save()
 
-        return Response({"message": "User updated"})
+        return Response(
+            {"message": "User updated"}, status=status.HTTP_200_OK)
 
     except User.DoesNotExist:
-        return Response({"error": "User not found"})
+        return Response(
+            {"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['PATCH'])
+@permission_classes([IsAdmin, IsAuthenticated])
+def block_user(request, id) -> Response:
+
+    try:
+        user: User = User.objects.get(id=id)
+        user.is_blocked = True
+        user.save()
+    except User.DoesNotExist:
+         return Response(
+            {"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    return Response(
+        {"message": "User blocked"}, status=status.HTTP_200_OK)
+
+@api_view(['PATCH'])
+@permission_classes([IsAdmin, IsAuthenticated])
+def unblock_user(request, id) -> Response:
+
+    try:
+        user: User = User.objects.get(id=id)
+        user.is_blocked = False
+        user.save()
+    except User.DoesNotExist:
+         return Response(
+            {"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+    return Response(
+        {"message": "User unblocked"}, status=status.HTTP_200_OK)
