@@ -7,12 +7,6 @@ from django.contrib.auth.password_validation import validate_password
 from rest_framework import status
 from permissions import IsAdmin, IsFinance, IsHR, IsUser
 
-@api_view(['GET'])
-def get_users(request):
-    return Response([
-        {"id": 1, "name": "Arek"}
-    ])
-
 @api_view(['POST'])
 def login(request) -> Response:
 
