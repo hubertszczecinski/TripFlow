@@ -5,7 +5,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import IsAuthenticated
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import status
-from permissions import IsAdmin, IsFinance, IsHR, IsUser
+from users.permissions import IsAdmin, IsFinance, IsHR, IsUser
+from typing import List
 
 @api_view(['POST'])
 def login(request) -> Response:
@@ -19,13 +20,17 @@ def login(request) -> Response:
             {"error" : "Provide the right email or phone number"},
             status=status.HTTP_400_BAD_REQUEST
         )
-    
-    user: User = None
+
 
     if email:
         user = user.objects.filter(email=email).first()
     elif phone_number:
         user = user.objects.filter(phone_number=phone_number).first()
+    else:
+        return Response(
+            {"error" : "Provide email or phone number"},
+            status=status.HTTP_400_BAD_REQUEST
+        )
 
     #401 or 400?
     if not user.check_password(password):
@@ -79,7 +84,7 @@ def register(request) -> Response:
             {"error": e.messages}, status=status.HTTP_400_BAD_REQUEST)
     
     user: User = User.objects.create_user(email=email, first_name=first_name, 
-                                          lastname=last_name, phone_number=phone_number, 
+                                          last_name=last_name, phone_number=phone_number, 
                                           password=password, username=email)
     
     try:
@@ -148,7 +153,7 @@ def generate_or_refresh_token(user: User) -> dict[str, str]:
 
     return {
         "refresh" : str(refresh),
-        "access" : str(refresh.acces_token)
+        "access" : str(refresh.access_token)
     }
 
 @api_view(['POST'])
@@ -206,6 +211,40 @@ def update_user(request, id) -> Response:
         return Response(
             {"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
     
+
+@api_view(['PATCH'])
+@permission_classes([IsAdmin, IsAuthenticated])
+def update_position(request, id) -> Response:
+
+    try:
+        user: User = User.objects.get(id=id)
+        user.position = request.data.get("position", user.position)
+        user.save()
+
+        return Response(
+            {"message": "User updated"}, status=status.HTTP_200_OK)
+
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAdmin, IsAuthenticated])
+def update_department(request, id) -> Response:
+
+    try:
+        user: User = User.objects.get(id=id)
+        user.department = request.data.get("department", user.department)
+        user.save()
+
+        return Response(
+            {"message": "User updated"}, status=status.HTTP_200_OK)
+
+    except User.DoesNotExist:
+        return Response(
+            {"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
+    
 @api_view(['PATCH'])
 @permission_classes([IsAdmin, IsAuthenticated])
 def block_user(request, id) -> Response:
@@ -233,6 +272,55 @@ def unblock_user(request, id) -> Response:
          return Response(
             {"error": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
 
-
     return Response(
         {"message": "User unblocked"}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_data(request) -> Response:
+
+    first_name: str = request.query_params.get("first_name")
+    last_name: str = request.query_params.get("last_name")
+
+    users: List[User] = User.objects.all()
+
+    if first_name:
+        users = users.filter(first_name__icontains=first_name)
+    if last_name:
+        users = users.filter(last_name__icontains=last_name)
+
+    data: dict = users.values("id", "email", "first_name", "last_name", "role", "phone_number")
+
+    return Response(data)
+
+#should we confine the visibility, so only people from HR can see people from HR?
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def users_role(request) -> Response:
+
+    role: str = request.query_params.get("role")
+
+    if not role:
+        return Response(
+            {"error": "Department is required"}, status=status.HTTP_400_BAD_REQUEST)
+
+    users: List[User] = User.objects.filter(role=role)
+
+    data: dict = users.values("id", "email", "first_name", "last_name", "role", "department")
+
+    return Response(data)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_my_profile(request):
+
+    user: User = request.user
+
+    return Response({
+        "full_name": f"{user.first_name} {user.last_name}",
+        "role": user.role,
+        "position": user.position,
+        "department": user.department,
+        "assigned_car_id": user.assigned_car_id,
+    })

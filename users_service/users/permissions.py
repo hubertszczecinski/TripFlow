@@ -23,4 +23,3 @@ class IsUser(BasePermission):
         if request.user.is_authenticated and request.user.role == "USER":
             return True
         return False
-        
